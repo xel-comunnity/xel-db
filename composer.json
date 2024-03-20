@@ -1,0 +1,33 @@
+{
+    "name": "xel/orm",
+    "description": "lightweight orm tools for PHP Swoole",
+    "type": "library",
+    "autoload": {
+        "psr-4": {
+            "Xel\\DB\\": "src/",
+            "Xel\\EXAMPLE\\": "Example/"
+        }
+    },
+    "authors": [
+        {
+            "name": "bxel07",
+            "email": "yogipratama.ut@gmail.com"
+        }
+    ],
+    "require": {
+      "ext-pdo": "*",
+        "php": ">=8.2"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^1.10",
+        "pestphp/pest": "^2.34"
+    },
+    "scripts": {
+        "analyse": "phpstan analyse"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}
