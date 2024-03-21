@@ -11,6 +11,7 @@ class XgenConnector
 {
     private ?Channel $channel = null;
     private ?Lock $lock = null;
+
     /**
      * @param array<string|int, mixed> $config
      * @param bool $poolMode
@@ -64,7 +65,6 @@ class XgenConnector
                     $this->config['password'],
                     $this->config['options']
                 );
-
             } catch (PDOException $e){
                 throw new Exception("Failed to create database connection: " . $e->getMessage(), $e->getCode(), $e);
             }
