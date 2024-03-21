@@ -62,9 +62,6 @@ $server->on('request', function (Request $request, Response $response) use ($ser
 
         $response->header('Content-Type', 'application/json');
         $response->end(json_encode($users));
-
-
-
     } catch (QueryBuilderException $e) {
         $response->header('Content-Type', 'application/json');
         $response->status($e->getHttpCode(), $e->getHttpMessage());
