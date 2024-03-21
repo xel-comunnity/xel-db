@@ -1,20 +1,20 @@
 <?php
 
+
 use Swoole\Http\Server;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Xel\DB\QueryBuilder\Exception\QueryBuilderException;
 use Xel\DB\QueryBuilder\QueryBuilderExecutor;
 use Xel\DB\XgenConnector;
-use Xel\DB\QueryBuilder\QueryBuilder;
 require __DIR__."/../vendor/autoload.php";
 
 
-$server = new Server('0.0.0.0', 9501, SWOOLE_PROCESS);
+$server = new Server('0.0.0.0', 9501, SWOOLE_BASE);
 $server->set([
-    'worker_num' => 40,
+    'worker_num' => swoole_cpu_num(),
     'log_file' => '/dev/null',
-//    'dispatch_mode' => 1,
+    'dispatch_mode' => 1,
     'open_tcp_nodelay'      => true,
     'reload_async'          => true,
     'max_wait_time'         => 60,
@@ -35,58 +35,35 @@ $server->on('workerStart', function (Server $server) {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]
     ],
-        true
+        true, 4
     ));
+
+    $db->initializationResource(50);
+    $db->initializeConnections();
 
     $queryBuilderExecutor = new QueryBuilderExecutor($db, true);
     $queryBuilder = new Xel\DB\QueryBuilder\QueryBuilder($queryBuilderExecutor);
 
     $server->setting = [
         'QueryBuilder' => $queryBuilder,
-        'XgenQueryAdapterInterface' => $db
     ];
 });
 
 $server->on('request', function (Request $request, Response $response) use ($server) {
 
-    /** @var QueryBuilder $queryBuilder */
+//    /** @var QueryBuilder $queryBuilder */
     $queryBuilder = $server->setting['QueryBuilder'];
+
     try {
-
-                        $users = $queryBuilder
-                            ->select(['id', 'fullname'])
-                            ->from('users')
-                            ->get();
-
-
-        //                $users = $queryBuilder
-        //                    ->insert('data', [
-        //                        'name' => 'yogi'
-        //                    ])->run();
-
-
-        //        $users = $queryBuilder
-        //            ->update('users', [
-        //                'fullname' => 'xela',
-        //                'email' => 'xel1@gmail.com',
-        //                'password' => 'obasan',
-        //                'date_of_birth' => "2012-08-06",
-        //                'gender' => 'laki-laki',
-        //                'contact' => '082228240098',
-        //                'religion' => 'Kristen',
-        //                'role_id' => 2
-        //            ])->where('id','=', 4)
-        //            ->run();
-
-
-        //                $users = $queryBuilder
-        //                    ->delete('data')
-        //                    ->where('name','=', 'yogi')
-        //                    ->run();
-        //
+        $users = $queryBuilder
+            ->select(['id', 'fullname'])
+            ->from('users')
+            ->get();
 
         $response->header('Content-Type', 'application/json');
         $response->end(json_encode($users));
+
+
 
     } catch (QueryBuilderException $e) {
         $response->header('Content-Type', 'application/json');
