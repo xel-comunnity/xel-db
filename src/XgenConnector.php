@@ -4,22 +4,13 @@ namespace Xel\DB;
 use Exception;
 use PDO;
 use PDOException;
-use Swoole\Atomic;
 use Swoole\Coroutine\Channel;
 use Swoole\Lock;
-/**
- * @phpstan-ignore-next-line
- */
-
-use function PHPUnit\Framework\throwException;
 use function Swoole\Coroutine\go;
 class XgenConnector
 {
-    private Channel $channel;
-    private Atomic $currentConnections;
-    private Lock $lock;
-
-
+    private ?Channel $channel = null;
+    private ?Lock $lock = null;
     /**
      * @param array<string|int, mixed> $config
      * @param bool $poolMode
@@ -30,35 +21,29 @@ class XgenConnector
         private readonly array $config,
         private readonly bool $poolMode,
         private readonly int $pool = 1,
-    ){
-        /**
-         * @phpstan-ignore-next-line
-         */
-        go(function ()  {
-            $this->channel = new Channel($this->pool);
-            $this->currentConnections = new Atomic();
+    ){}
+
+    public function initializationResource(int $pool = 10): void
+    {
+        go(function () use ($pool){
+            $this->channel = new Channel($pool);
             $this->lock = new Lock(SWOOLE_SPINLOCK);
-            $this->initializeConnections();
         });
     }
 
     /**
      * @throws Exception
      */
-    private function initializeConnections(): void
+    public function initializeConnections(): void
     {
         if ($this->poolMode){
-            $this->lock->lock();
             try {
                 for ($i = 0; $i < $this->pool; $i++) {
                     $conn = $this->createConnections();
                     $this->channel->push($conn);
-
                 }
             } catch (PDOException $e) {
                 throw new Exception($e->getMessage());
-            } finally {
-                $this->lock->unlock();
             }
         }else{
             $this->createConnections();
@@ -116,20 +101,24 @@ class XgenConnector
     public function getPoolConnection():PDO|false
     {
         while (true) {
-            $conn = $this->channel->pop();
-
-            if ($conn === false) {
-                if ($this->currentConnections->get() < $this->channel->length()) {
-                    $conn = $this->createConnections();
-                    $this->currentConnections->add();
-                    return $conn;
-                } else {
-                    // Maximum connections reached, wait and try again
-                    usleep(10000); // Sleep for 10 milliseconds
+            if ($this->lock->trylock()){
+                try {
+                    $conn = $this->channel->pop();
+                    if ($conn === false) {
+                        if (!$this->channel->isFull()) {
+                            return $this->createConnections();
+                        }
+                    } elseif ($this->validateConnection($conn)) {
+                        return $conn;
+                    }
+                } finally {
+                    $this->lock->unlock();
                 }
-            } elseif ($this->validateConnection($conn)) {
-                return $conn;
+            }else{
+                // Maximum connections reached, wait and try again
+                return false;
             }
+
         }
     }
 
@@ -139,15 +128,15 @@ class XgenConnector
     public function releasePoolConnection(PDO $conn): void
     {
         if ($this->validateConnection($conn)){
-            $this->lock->lock();
-            try {
-                $this->channel->push($conn);
-                $this->currentConnections->sub();
-            } finally {
-                $this->lock->unlock();
+            if ($this->lock->trylock()){
+                try {
+                    $this->channel->push($conn);
+                }
+                finally {
+                    $this->lock->unlock();
+                }
             }
         }
-
     }
 
     /**
