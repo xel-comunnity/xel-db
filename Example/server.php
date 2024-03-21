@@ -10,11 +10,11 @@ use Xel\DB\QueryBuilder\QueryBuilder;
 require __DIR__."/../vendor/autoload.php";
 
 
-$server = new Server('0.0.0.0', 9501, SWOOLE_BASE);
+$server = new Server('0.0.0.0', 9501, SWOOLE_PROCESS);
 $server->set([
-    'worker_num' => swoole_cpu_num(),
+    'worker_num' => 40,
     'log_file' => '/dev/null',
-    'dispatch_mode' => 1,
+//    'dispatch_mode' => 1,
     'open_tcp_nodelay'      => true,
     'reload_async'          => true,
     'max_wait_time'         => 60,
@@ -35,11 +35,10 @@ $server->on('workerStart', function (Server $server) {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]
     ],
-        30,
-        20
+        true
     ));
 
-    $queryBuilderExecutor = new QueryBuilderExecutor($db);
+    $queryBuilderExecutor = new QueryBuilderExecutor($db, true);
     $queryBuilder = new Xel\DB\QueryBuilder\QueryBuilder($queryBuilderExecutor);
 
     $server->setting = [
@@ -55,8 +54,8 @@ $server->on('request', function (Request $request, Response $response) use ($ser
     try {
 
                         $users = $queryBuilder
-                            ->select(['id', 'name'])
-                            ->from('data')
+                            ->select(['id', 'fullname'])
+                            ->from('users')
                             ->get();
 
 
