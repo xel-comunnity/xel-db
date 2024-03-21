@@ -48,6 +48,4 @@ class MigrationLoader
     {
         return $this->table;
     }
-
-
 }

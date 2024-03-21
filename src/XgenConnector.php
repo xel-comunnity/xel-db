@@ -6,25 +6,30 @@ use PDO;
 use PDOException;
 use Swoole\Atomic;
 use Swoole\Coroutine\Channel;
+use Swoole\Lock;
 /**
  * @phpstan-ignore-next-line
  */
+
+use function PHPUnit\Framework\throwException;
 use function Swoole\Coroutine\go;
 class XgenConnector
 {
     private Channel $channel;
     private Atomic $currentConnections;
+    private Lock $lock;
+
 
     /**
      * @param array<string|int, mixed> $config
+     * @param bool $poolMode
      * @param int $pool
-     * @param int $maxConnections
      */
     public function __construct
     (
         private readonly array $config,
-        private readonly int $pool,
-        private readonly int $maxConnections
+        private readonly bool $poolMode,
+        private readonly int $pool = 1,
     ){
         /**
          * @phpstan-ignore-next-line
@@ -32,68 +37,117 @@ class XgenConnector
         go(function ()  {
             $this->channel = new Channel($this->pool);
             $this->currentConnections = new Atomic();
+            $this->lock = new Lock(SWOOLE_SPINLOCK);
             $this->initializeConnections();
         });
     }
 
+    /**
+     * @throws Exception
+     */
     private function initializeConnections(): void
     {
-        for ($i = 0; $i < $this->pool; $i++) {
-            $conn = new PDO(
-                $this->config['dsn'],
-                $this->config['username'],
-                $this->config['password'],
-                $this->config['options']
-            );
+        if ($this->poolMode){
+            $this->lock->lock();
+            try {
+                for ($i = 0; $i < $this->pool; $i++) {
+                    $conn = $this->createConnections();
+                    $this->channel->push($conn);
 
-            $this->channel->push($conn);
+                }
+            } catch (PDOException $e) {
+                throw new Exception($e->getMessage());
+            } finally {
+                $this->lock->unlock();
+            }
+        }else{
+            $this->createConnections();
+        }
+
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function createConnections(): PDO
+    {
+        if ($this->poolMode){
+            try {
+                return new PDO(
+                    $this->config['dsn'],
+                    $this->config['username'],
+                    $this->config['password'],
+                    $this->config['options']
+                );
+
+            } catch (PDOException $e){
+                throw new Exception("Failed to create database connection: " . $e->getMessage(), $e->getCode(), $e);
+            }
+        }else{
+            try {
+                $pdo =  new PDO(
+                    $this->config['dsn'],
+                    $this->config['username'],
+                    $this->config['password'],
+                    $this->config['options']
+                );
+
+                $pdo->setAttribute(PDO::ATTR_PERSISTENT, true);
+
+                return $pdo;
+
+            } catch (PDOException $e){
+                throw new Exception("Failed to create database connection: " . $e->getMessage(), $e->getCode(), $e);
+            }
+        }
+
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function getPersistentConnection(): PDO
+    {
+        return $this->createConnections();
+    }
+    /**
+     * @throws Exception
+     */
+    public function getPoolConnection():PDO|false
+    {
+        while (true) {
+            $conn = $this->channel->pop();
+
+            if ($conn === false) {
+                if ($this->currentConnections->get() < $this->channel->length()) {
+                    $conn = $this->createConnections();
+                    $this->currentConnections->add();
+                    return $conn;
+                } else {
+                    // Maximum connections reached, wait and try again
+                    usleep(10000); // Sleep for 10 milliseconds
+                }
+            } elseif ($this->validateConnection($conn)) {
+                return $conn;
+            }
         }
     }
 
     /**
      * @throws Exception
      */
-    public function getConnection():PDO|false
+    public function releasePoolConnection(PDO $conn): void
     {
-        $conn = $this->channel->pop();
-        if ($conn === false) {
-            // No connections available in the pool
-            if ($this->currentConnections->get()  > $this->maxConnections) {
-                throw new Exception("Cannot create more connections: ");
-            }
-
-            // ? Create new connections up to the maximum allowed per worker
-            $this->initializeConnections();
-            $conn = $this->channel->pop();
-
-        }
-
-        // Validate the connection
-        if (!$this->validateConnection($conn)) {
-            $conn = null;
+        if ($this->validateConnection($conn)){
+            $this->lock->lock();
             try {
-                $conn = new PDO(
-                    $this->config['dsn'],
-                    $this->config['username'],
-                    $this->config['password'],
-                    $this->config['options']
-                );
-                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            } catch (PDOException $e) {
-                throw new Exception("Failed to create database connection: " , $e->getCode());
+                $this->channel->push($conn);
+                $this->currentConnections->sub();
+            } finally {
+                $this->lock->unlock();
             }
         }
-        if ($conn !== null) {
-            $this->currentConnections->add();
-        }
 
-        return $conn;
-    }
-
-    public function releaseConnection(PDO $conn): void
-    {
-        $this->channel->push($conn);
-        $this->currentConnections->sub();
     }
 
     /**
