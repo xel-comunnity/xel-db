@@ -13,7 +13,6 @@ try {
     $config = 'mysql:host=localhost;dbname=databases';
     $dsn = explode(';', $config);
     $dbname = explode('=', $config);
-
     $config = [
         'dsn' => $config.";charset=utf8mb4",
         'username' => 'root',

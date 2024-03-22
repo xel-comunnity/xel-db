@@ -30,9 +30,11 @@ class MigrationLoader
                 $className = pathinfo($file->getPathname(), PATHINFO_FILENAME);
                 $fullClassName = $this->namespace . '\\' . $className;
                 if (class_exists($fullClassName) && $className !== "migrations") {
-                        $this->migrations[$className] = $fullClassName;
+                        $instance = new $fullClassName();
+                        $this->migrations[$className] = $instance;
                 }else{
-                    $this->table[$className] = $fullClassName;
+                    $instance = new $fullClassName();
+                    $this->table[$className] = $instance;
                 }
             }
         }

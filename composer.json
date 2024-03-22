@@ -16,7 +16,8 @@
     ],
     "require": {
         "ext-pdo": "*",
-        "php": ">=8.2"
+        "php": ">=8.2",
+        "ext-mysqli": "*"
     },
     "require-dev": {
         "phpstan/phpstan": "^1.10",

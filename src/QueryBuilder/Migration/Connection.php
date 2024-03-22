@@ -14,7 +14,7 @@ class Connection
      * @param array<string|int, mixed> $config
      * @throws Exception
      */
-    public function __construct(array $config)
+    public function __construct(private readonly array $config, private readonly string $dbname)
     {
         try {
             $this->pdo = new PDO(
@@ -25,8 +25,26 @@ class Connection
             );
             $this->pdo->setAttribute(PDO::ATTR_AUTOCOMMIT, true);
         }catch (PDOException $e){
-            throw new Exception($e->getMessage(), $e->getCode());
+
         }
+    }
+
+    public function isDatabaseExists(): bool
+    {
+
+        $stmt = $this->pdo->prepare("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = :db");
+        $stmt->execute([':db' => $this->dbname]);
+        return (bool)$stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function createDatabase(): bool
+    {
+        if (!$this->isDatabaseExists()){
+            $sql = "CREATE DATABASE `{$this->dbname}`";
+            $this->pdo->exec($sql);
+            return true;
+        }
+        return false;
     }
 
     public function getConnection(): PDO

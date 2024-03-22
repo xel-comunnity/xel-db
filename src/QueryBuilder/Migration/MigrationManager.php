@@ -56,28 +56,25 @@ class MigrationManager
             $conn->beginTransaction();
 
             // ? check the migration already exist
-            $stmt = $conn->prepare("SELECT COUNT(*) FROM migrations WHERE migration = :migration");
+            $stmt = $conn->prepare("SELECT COUNT(migration) as migration_count FROM migrations WHERE migration = :migration");
             $stmt->bindValue(":migration", $interlock);
             $stmt->execute();
+
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
             // ? do nothing if the migration exist
-            if (count($stmt->fetchAll()) > 0){
+            if ($result['migration_count'] === 0){
+                $stmt = $conn->prepare("INSERT INTO migrations (migration) VALUES (:migration)");
+                $stmt->bindValue(":migration", $interlock);
+                $stmt->execute();
                 $conn->commit();
-                return;
             }
-
-            // ? insert
-            $stmt = $conn->prepare("INSERT INTO migrations (migration) VALUES (:migration)");
-            $stmt->bindValue(":migration", $interlock);
-            $stmt->execute();
-            $conn->commit();
         }catch (PDOException $e){
             $conn->rollBack();
             throw new Exception($e->getMessage());
         }
 
     }
-
 
     private static function isMigrationExist(): void
     {
@@ -110,13 +107,9 @@ class MigrationManager
         foreach ($currentMigration as $value){
             $check = self::isTableExist($value);
             if ($check){
-                $data = self::$list[$value];
-                $availableMigration[] = $data;
-            }else{
-                $availableMigration = [];
+                $availableMigration[] = $value;
             }
         }
-
         return $availableMigration;
     }
 
@@ -132,7 +125,7 @@ class MigrationManager
             try {
                 $currentMigration = [];
                 // $current Migrations
-                foreach (self::$list as $migration){
+                foreach (self::$list as $migration => $value){
                     if (count($currentMigration) < $step){
                         $currentMigration[] = $migration;
                     }else{
@@ -141,32 +134,25 @@ class MigrationManager
                 }
 
                 if (count($availableMigration) > count($currentMigration)){
-                    $currentData = array_diff($availableMigration, $currentMigration);
+                    $data = array_diff($availableMigration, $currentMigration);
+
+                    $currentData = array_intersect_key(self::$list, array_flip($data));
                     foreach ($currentData as $value){
-                        $instance = new $value();
-                        if ($instance instanceof Migration){
-                            $instance->down();
+                        if ($value instanceof Migration){
+                            $value->down();
                         }else{
                             break;
                         }
                     }
                 }elseif(count($availableMigration) < count($currentMigration)){
-                    $currentData = array_diff($currentMigration, $availableMigration);
-                    foreach ($currentData as $value){
-                        $instance = new $value();
-                        if ($instance instanceof Migration){
-                            $instance->up();
-                        }else{
-                            break;
-                        }
-                    }
-                }else{
-                    $currentData = $availableMigration;
+
+                    $data = array_diff($currentMigration, $availableMigration);
+
+                    $currentData = array_intersect_key(self::$list, array_flip($data));
 
                     foreach ($currentData as $value){
-                        $instance = new $value();
-                        if ($instance instanceof Migration){
-                            $instance->up();
+                        if ($value instanceof Migration){
+                            $value->up();
                         }else{
                             break;
                         }
@@ -176,10 +162,9 @@ class MigrationManager
                 throw new Exception($e->getMessage());
             }
         }else{
-            foreach ($availableMigration as $value){
-                $instance = new $value();
-                if ($instance instanceof Migration){
-                    $instance->down();
+            foreach (self::$list as $value){
+                if ($value instanceof Migration){
+                    $value->down();
                 }else{
                     break;
                 }
@@ -193,11 +178,7 @@ class MigrationManager
      */
     public static function migrate(): void
     {
-        /**
-         * Checkup the Migrations
-         */
         self::isMigrationExist();
-
         foreach (self::$list as $key => $value){
             try {
                 if ($value instanceof Migration){
@@ -215,15 +196,17 @@ class MigrationManager
      */
     public static function freshMigrate(): void
     {
-        /**
-         * Checkup the Migrations
-         */
-        self::isMigrationExist();
+
 
         /**
          * Drop Migrations
          */
         self::dropMigration();
+
+        /**
+         * Checkup the Migrations
+         */
+        self::isMigrationExist();
 
         foreach (self::$list as $key => $value){
             try {

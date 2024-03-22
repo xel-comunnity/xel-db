@@ -7,7 +7,6 @@ use PDOStatement;
 use stdClass;
 use Xel\DB\Contract\QueryBuilderInterface;
 use Xel\DB\Contract\QueryBuilderResultInterface;
-use Xel\DB\QueryBuilder\Exception\QueryBuilderException;
 
 class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
 {
@@ -309,25 +308,12 @@ class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
     }
 
     /**
-     * @throws Exception
-     */
-    private function fetchGenerator(int $mode):array|string|stdClass
-    {
-        $stmt = $this->executor();
-        $result = $stmt->fetch($mode);
-        if(empty($result)){
-            throw new QueryBuilderException('no data found');
-        }
-        return $result;
-    }
-
-    /**
      * @return array<string|int, mixed>
      * @throws Exception
      */
     public function get(): array
     {
-        return $this->fetchGenerator(PDO::FETCH_ASSOC);
+        return $this->executor()->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -335,12 +321,12 @@ class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
      */
     public function toObject(): array|stdClass
     {
-        return $this->fetchGenerator(PDO::FETCH_OBJ);
+        return $this->executor()->fetchAll(PDO::FETCH_OBJ);
     }
 
     public function toJson(bool $prettyPrint = false): false|string
     {
-        $result = $this->fetchGenerator(PDO::FETCH_ASSOC);
+        $result = $this->executor()->fetchAll(PDO::FETCH_ASSOC);
         return json_encode($result);
     }
 
