@@ -5,9 +5,12 @@ use Swoole\Http\Server;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Xel\DB\QueryBuilder\Exception\QueryBuilderException;
+use Xel\DB\QueryBuilder\QueryBuilder;
 use Xel\DB\QueryBuilder\QueryBuilderExecutor;
 use Xel\DB\XgenConnector;
 require __DIR__."/../vendor/autoload.php";
+
+
 
 
 $server = new Server('0.0.0.0', 9501, SWOOLE_BASE);
@@ -35,8 +38,9 @@ $server->on('workerStart', function (Server $server) {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]
     ],
-        true, 4
+        true, swoole_cpu_num()
     ));
+
 
     $db->initializationResource(50);
     $db->initializeConnections();
@@ -51,7 +55,7 @@ $server->on('workerStart', function (Server $server) {
 
 $server->on('request', function (Request $request, Response $response) use ($server) {
 
-//    /** @var QueryBuilder $queryBuilder */
+    /** @var QueryBuilder $queryBuilder */
     $queryBuilder = $server->setting['QueryBuilder'];
 
     try {
