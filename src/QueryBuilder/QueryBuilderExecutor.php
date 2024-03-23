@@ -9,10 +9,10 @@ use PDOStatement;
 use Xel\DB\QueryBuilder\Exception\QueryBuilderException;
 use Xel\DB\XgenConnector;
 
-readonly class QueryBuilderExecutor
+trait QueryBuilderExecutor
 {
-    public function __construct(private XgenConnector $connector, private bool $mode)
-    {}
+//    public function __construct(private XgenConnector $connector, private bool $mode)
+//    {}
 
     /**
      * @throws Exception

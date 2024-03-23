@@ -1,13 +1,15 @@
 <?php
 
 
+use Swoole\Constant;
+use Swoole\Coroutine;
 use Swoole\Http\Server;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Xel\DB\QueryBuilder\Exception\QueryBuilderException;
 use Xel\DB\QueryBuilder\QueryBuilder;
-use Xel\DB\QueryBuilder\QueryBuilderExecutor;
 use Xel\DB\XgenConnector;
+
 require __DIR__."/../vendor/autoload.php";
 
 
@@ -28,6 +30,7 @@ $server->set([
     'buffer_output_size'    => swoole_cpu_num() * 1024 * 1024,
 ]);
 
+Coroutine::set([Constant::OPTION_HOOK_FLAGS => SWOOLE_HOOK_TCP]);
 $server->on('workerStart', function (Server $server) {
     $db = (new XgenConnector([
         'dsn' => 'mysql:host=localhost;dbname=absensi',
@@ -41,31 +44,37 @@ $server->on('workerStart', function (Server $server) {
         true, swoole_cpu_num()
     ));
 
-
-    $db->initializationResource(50);
     $db->initializeConnections();
 
-    $queryBuilderExecutor = new QueryBuilderExecutor($db, true);
-    $queryBuilder = new Xel\DB\QueryBuilder\QueryBuilder($queryBuilderExecutor);
+    $queryBuilder = new QueryBuilder($db, true);
 
     $server->setting = [
         'QueryBuilder' => $queryBuilder,
+        'db' => $db
     ];
 });
 
 $server->on('request', function (Request $request, Response $response) use ($server) {
 
-    /** @var QueryBuilder $queryBuilder */
-    $queryBuilder = $server->setting['QueryBuilder'];
+//    /** @var QueryBuilder $queryBuilder */
+//    $queryBuilder = $server->setting['QueryBuilder'];
+    /** @var XgenConnector $queryBuilder */
+    $queryBuilder = $server->setting['db'];
 
     try {
-        $users = $queryBuilder
-            ->select(['id', 'fullname'])
-            ->from('users')
-            ->get();
+        $data = $queryBuilder->getPoolConnection();
+        $users = $data->query('SELECT id, fullname FROM users');
+        $users->execute();
+        $result = $users->fetchAll(PDO::FETCH_ASSOC);
+
+        $queryBuilder->releasePoolConnection($data);
+//        $result = $queryBuilder
+//            ->select(['id', 'fullname'])
+//            ->from('users')
+//            ->get();
 
         $response->header('Content-Type', 'application/json');
-        $response->end(json_encode($users));
+        $response->end(json_encode($result));
     } catch (QueryBuilderException $e) {
         $response->header('Content-Type', 'application/json');
         $response->status($e->getHttpCode(), $e->getHttpMessage());

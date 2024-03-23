@@ -7,6 +7,7 @@ use PDOStatement;
 use stdClass;
 use Xel\DB\Contract\QueryBuilderInterface;
 use Xel\DB\Contract\QueryBuilderResultInterface;
+use Xel\DB\XgenConnector;
 
 class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
 {
@@ -16,9 +17,13 @@ class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
      */
     protected array $binding = [];
 
+    use QueryBuilderExecutor;
+
     public function __construct
     (
-      private readonly QueryBuilderExecutor $builderExecutor
+//      private readonly QueryBuilderExecutor $builderExecutor
+        protected XgenConnector $connector,
+        protected bool $mode
     ){}
 
     public function getQuery(): string
@@ -202,7 +207,6 @@ class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
         return $this;
     }
 
-
     /***
      * @param string $column
      * @param string $operator
@@ -295,7 +299,7 @@ class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
      */
     private function executor(): false|string|PDOStatement
     {
-        return $this->builderExecutor->execute($this->getQuery(), $this->getBinding());
+        return $this->execute($this->getQuery(), $this->getBinding());
     }
 
     /**
@@ -303,8 +307,7 @@ class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
      */
     public function run(): false|string|PDOStatement
     {
-        return $this->builderExecutor
-            ->execute($this->getQuery(), $this->getBinding());
+        return $this->execute($this->getQuery(), $this->getBinding());
     }
 
     /**
