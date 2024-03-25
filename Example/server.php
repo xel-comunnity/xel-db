@@ -11,13 +11,9 @@ use Xel\DB\QueryBuilder\QueryBuilder;
 use Xel\DB\XgenConnector;
 
 require __DIR__."/../vendor/autoload.php";
-
-
-
-
 $server = new Server('0.0.0.0', 9501, SWOOLE_PROCESS);
 $server->set([
-    'worker_num' => 35,
+    'worker_num' =>35,
     'log_file' => '/dev/null',
     'dispatch_mode' => 1,
     'open_tcp_nodelay'      => true,
@@ -44,7 +40,7 @@ $server->on('workerStart', function (Server $server) {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]
     ],
-        true, swoole_cpu_num()
+        true, 1
     ));
 
     $db->initializeConnections();
@@ -59,22 +55,22 @@ $server->on('workerStart', function (Server $server) {
 
 $server->on('request', function (Request $request, Response $response) use ($server) {
 
-//    /** @var QueryBuilder $queryBuilder */
-//    $queryBuilder = $server->setting['QueryBuilder'];
-    /** @var XgenConnector $queryBuilder */
-    $queryBuilder = $server->setting['db'];
+    /** @var QueryBuilder $queryBuilder */
+    $queryBuilder = $server->setting['QueryBuilder'];
+//    /** @var XgenConnector $queryBuilder */
+//    $queryBuilder = $server->setting['db'];
 
     try {
-        $data = $queryBuilder->getPoolConnection();
-        $users = $data->query('SELECT id, fullname FROM users');
-        $users->execute();
-        $result = $users->fetchAll(PDO::FETCH_ASSOC);
-
-        $queryBuilder->releasePoolConnection($data);
-//        $result = $queryBuilder
-//            ->select(['id', 'fullname'])
-//            ->from('users')
-//            ->get();
+//        $data = $queryBuilder->getPoolConnection();
+//        $users = $data->query('SELECT id, fullname FROM users');
+//        $users->execute();
+//        $result = $users->fetchAll(PDO::FETCH_ASSOC);
+//
+//        $queryBuilder->releasePoolConnection($data);
+        $result = $queryBuilder
+            ->select(['id', 'fullname'])
+            ->from('users')
+            ->getAsync();
 
         $response->header('Content-Type', 'application/json');
         $response->end(json_encode($result));
