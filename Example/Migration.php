@@ -10,13 +10,13 @@ $directory = __DIR__ . '/../Example/Migrate/';
 $string = "\\Xel\\EXAMPLE\Migrate";
 
 try {
-    $config = 'mysql:host=localhost;dbname=databases';
-    $dsn = explode(';', $config);
-    $dbname = explode('=', $config);
     $config = [
-        'dsn' => $config.";charset=utf8mb4",
+        'driver' => 'mysql',
+        'host' => 'localhost',
+        'charset' => 'utf8mb4',
         'username' => 'root',
         'password' => 'Todokana1ko!',
+        'dbname' => 'x',
         'options' =>[
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -26,22 +26,20 @@ try {
     /**
      * Connection Init
      */
-    $conn = new Connection($config, $dbname[2]);
+    $conn = new Connection($config);
     $load = new MigrationLoader($directory, $string);
     $load->load();
 
-
    if (!$conn->isDatabaseExists()){
        $conn->createDatabase();
-       $conn = 0;
    }
-    $x = new Connection($config, $dbname[2]);
+    $x = new Connection($config);
 
     /**
      * Migration runner
      */
     MigrationManager::init($x->getConnection(), $load);
-    MigrationManager::rollback(3);
+    MigrationManager::migrate();
 } catch (ReflectionException|Exception $e) {
     echo $e->getMessage();
 }

@@ -15,9 +15,9 @@ require __DIR__."/../vendor/autoload.php";
 
 
 
-$server = new Server('0.0.0.0', 9501, SWOOLE_BASE);
+$server = new Server('0.0.0.0', 9501, SWOOLE_PROCESS);
 $server->set([
-    'worker_num' => swoole_cpu_num(),
+    'worker_num' => 35,
     'log_file' => '/dev/null',
     'dispatch_mode' => 1,
     'open_tcp_nodelay'      => true,
@@ -33,9 +33,12 @@ $server->set([
 Coroutine::set([Constant::OPTION_HOOK_FLAGS => SWOOLE_HOOK_TCP]);
 $server->on('workerStart', function (Server $server) {
     $db = (new XgenConnector([
-        'dsn' => 'mysql:host=localhost;dbname=absensi',
+        'driver' => 'mysql',
+        'host' => 'localhost',
+        'charset' => 'utf8mb4',
         'username' => 'root',
         'password' => 'Todokana1ko!',
+        'dbname' => 'absensi',
         'options' =>[
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
