@@ -42,7 +42,6 @@ class Connection
 
     public function isDatabaseExists(): bool
     {
-
         $stmt = $this->pdo->prepare("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = :db");
         $stmt->execute([':db' => $this->config['dbname']]);
         return (bool)$stmt->fetch(PDO::FETCH_ASSOC);

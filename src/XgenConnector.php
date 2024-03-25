@@ -9,7 +9,7 @@ use Swoole\Coroutine\Channel;
 
 class XgenConnector
 {
-    private ?Channel $channel;
+    private Channel $channel;
     private ?PDO $persistence = null;
     /**
      * @param array<string|int, mixed> $config
@@ -37,7 +37,6 @@ class XgenConnector
                 });
             }
         }else{
-            $this->channel = null;
             $conn = $this->createConnections();
             $this->persistence = $conn;
         }
@@ -48,33 +47,23 @@ class XgenConnector
      */
     private function createConnections(): PDO
     {
-        $dsn = "{$this->config['driver']}:host={$this->config['host']};dbname={$this->config['dbname']};charset={$this->config['charset']}";
-        if ($this->poolMode){
-            try {
-                return new PDO(
-                    $dsn,
-                    $this->config['username'],
-                    $this->config['password'],
-                    $this->config['options']
-                );
-            } catch (PDOException $e){
-                throw new Exception("Failed to create database connection: " . $e->getMessage(), $e->getCode(), $e);
-            }
-        }else{
-            try {
-                $pdo =  new PDO(
-                    $dsn,
-                    $this->config['username'],
-                    $this->config['password'],
-                    $this->config['options']
-                );
-                $pdo->setAttribute(PDO::ATTR_PERSISTENT, true);
-                return $pdo;
-            } catch (PDOException $e){
-                throw new Exception("Failed to create database connection: " . $e->getMessage(), $e->getCode(), $e);
-            }
-        }
 
+        $dsn = "{$this->config['driver']}:host={$this->config['host']};dbname={$this->config['dbname']};charset={$this->config['charset']}";
+        try {
+            $pdo = new PDO(
+                $dsn,
+                $this->config['username'],
+                $this->config['password'],
+                $this->config['options']
+            );
+
+            if (!$this->poolMode) {
+                $pdo->setAttribute(PDO::ATTR_PERSISTENT, true);
+            }
+            return $pdo;
+        } catch (PDOException $e) {
+            throw new Exception("Failed to create database connection: " . $e->getMessage(), $e->getCode(), $e);
+        }
     }
 
     /**

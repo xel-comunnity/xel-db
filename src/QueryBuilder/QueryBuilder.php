@@ -5,6 +5,8 @@ use Exception;
 use PDO;
 use PDOStatement;
 use stdClass;
+use Swoole\Coroutine;
+use Swoole\Coroutine\Channel;
 use Xel\DB\Contract\QueryBuilderInterface;
 use Xel\DB\Contract\QueryBuilderResultInterface;
 use Xel\DB\XgenConnector;
@@ -17,11 +19,12 @@ class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
      */
     protected array $binding = [];
 
+    protected Channel $chan;
+
     use QueryBuilderExecutor;
 
     public function __construct
     (
-//      private readonly QueryBuilderExecutor $builderExecutor
         protected XgenConnector $connector,
         protected bool $mode
     ){}
@@ -319,6 +322,17 @@ class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
         return $this->executor()->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function getAsync():?array
+    {
+        $can = new Channel(1);
+        Coroutine::create(function () use($can){
+            $data = $this->execute($this->getQuery(), $this->getBinding());
+            $result = $data->fetchAll(PDO::FETCH_ASSOC);
+            $can->push($result);
+        });
+        return $can->pop();
+    }
+
     /**
      * @throws Exception
      */
@@ -332,8 +346,6 @@ class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
         $result = $this->executor()->fetchAll(PDO::FETCH_ASSOC);
         return json_encode($result);
     }
-
-
     public function orderBy(string $column, string $direction = 'DESC'): static
     {
         $this->query .= " ORDER BY $column $direction";
