@@ -3,9 +3,9 @@
 namespace Xel\DB\Contract;
 
 use Exception;
-use Xel\DB\QueryBuilder\QueryBuilder;
+use Xel\DB\QueryBuilder\QueryDML;
 
-interface QueryBuilderInterface
+interface QueryDMLInterface
 {
     /**
      * @param array<string|int, mixed> $bind
@@ -46,12 +46,9 @@ interface QueryBuilderInterface
         string $connectOperator = 'AND'
     ): static;
 
-    public function innerJoin(string $table, string $condition): static;
-    public function leftJoin(string $table, string $condition): static;
-    public function rightJoin(string $table, string $condition): static;
-    public function crossJoin(string $table): static;
+
     /**
      * @throws Exception
      */
-    public function latest(int $limit = 0): QueryBuilder;
+    public function latest(int $limit = 0): QueryDML;
 }

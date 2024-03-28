@@ -7,13 +7,13 @@ use Swoole\Http\Server;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Xel\DB\QueryBuilder\Exception\QueryBuilderException;
-use Xel\DB\QueryBuilder\QueryBuilder;
+use Xel\DB\QueryBuilder\QueryDML;
 use Xel\DB\XgenConnector;
 
 require __DIR__."/../vendor/autoload.php";
-$server = new Server('0.0.0.0', 9501, SWOOLE_PROCESS);
+$server = new Server('0.0.0.0', 9501, SWOOLE_BASE);
 $server->set([
-    'worker_num' =>35,
+    'worker_num' =>swoole_cpu_num(),
     'log_file' => '/dev/null',
     'dispatch_mode' => 1,
     'open_tcp_nodelay'      => true,
@@ -34,7 +34,7 @@ $server->on('workerStart', function (Server $server) {
         'charset' => 'utf8mb4',
         'username' => 'root',
         'password' => 'Todokana1ko!',
-        'dbname' => 'absensi',
+        'dbname' => 'sample',
         'options' =>[
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -45,32 +45,40 @@ $server->on('workerStart', function (Server $server) {
 
     $db->initializeConnections();
 
-    $queryBuilder = new QueryBuilder($db, true);
+    $queryBuilder = new QueryDML($db, true);
 
     $server->setting = [
-        'QueryBuilder' => $queryBuilder,
+        'QueryDML' => $queryBuilder,
         'db' => $db
     ];
 });
 
 $server->on('request', function (Request $request, Response $response) use ($server) {
 
-    /** @var QueryBuilder $queryBuilder */
-    $queryBuilder = $server->setting['QueryBuilder'];
-//    /** @var XgenConnector $queryBuilder */
-//    $queryBuilder = $server->setting['db'];
-
+    /** @var QueryDML $queryBuilder */
+    $queryBuilder = $server->setting['QueryDML'];
     try {
-//        $data = $queryBuilder->getPoolConnection();
-//        $users = $data->query('SELECT id, fullname FROM users');
-//        $users->execute();
-//        $result = $users->fetchAll(PDO::FETCH_ASSOC);
+//        $queryBuilder
+//            ->insert(
+//                "users",
+//                [
+//                    "name"=> "andi",
+//                    "email"=> "andi.ut@gmail.com"
+//                ])->run();
 //
-//        $queryBuilder->releasePoolConnection($data);
-        $result = $queryBuilder
-            ->select(['id', 'fullname'])
-            ->from('users')
-            ->getAsync();
+//        $user_id = $queryBuilder->lastId;
+//        if ($user_id !== false) {
+//            $queryBuilder->insert(
+//                "user_role",
+//                [
+//                    "user_id"=> $user_id,
+//                    "role_id"=> 2
+//                ])->run();
+//        }
+
+        $result = $queryBuilder->select(["users.id","users.name", "role.role"])->from('users')
+            ->leftJoin('user_role', 'users.id = user_role.user_id')
+            ->leftJoin('role', ' user_role.role_id = role.id ')->get();
 
         $response->header('Content-Type', 'application/json');
         $response->end(json_encode($result));
@@ -79,7 +87,6 @@ $server->on('request', function (Request $request, Response $response) use ($ser
         $response->status($e->getHttpCode(), $e->getHttpMessage());
         $response->end(json_encode("Error : ". $e->getMessage()));
     }
-
 });
 
 $server->start();

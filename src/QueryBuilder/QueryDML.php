@@ -7,11 +7,12 @@ use PDOStatement;
 use stdClass;
 use Swoole\Coroutine;
 use Swoole\Coroutine\Channel;
-use Xel\DB\Contract\QueryBuilderInterface;
+use Xel\DB\Contract\QueryDMLInterface;
 use Xel\DB\Contract\QueryBuilderResultInterface;
+use Xel\DB\Contract\QueryJoinInterface;
 use Xel\DB\XgenConnector;
 
-class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
+class QueryDML implements QueryDMLInterface, QueryBuilderResultInterface, QueryJoinInterface
 {
     protected string $query;
     /**
@@ -19,7 +20,7 @@ class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
      */
     protected array $binding = [];
 
-    protected Channel $chan;
+    protected string|false $result;
 
     use QueryBuilderExecutor;
 
@@ -286,7 +287,7 @@ class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
     /**
      * @throws Exception
      */
-    public function latest(int $limit = 0): QueryBuilder
+    public function latest(int $limit = 0): QueryDML
     {
         if ($limit > 0){
             $this->query .= " ORDER BY id DESC LIMIT :limit";
@@ -308,10 +309,13 @@ class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
     /**
      * @throws Exception
      */
-    public function run(): false|string|PDOStatement
+    public function run(): false|PDO|string|PDOStatement
     {
-        return $this->execute($this->getQuery(), $this->getBinding());
+        $result = $this->execute($this->getQuery(), $this->getBinding());
+        $this->resetState();
+        return $result;
     }
+
 
     /**
      * @return array<string|int, mixed>
@@ -331,6 +335,12 @@ class QueryBuilder implements QueryBuilderInterface, QueryBuilderResultInterface
             $can->push($result);
         });
         return $can->pop();
+    }
+
+    public function resetState(): void
+    {
+        $this->query = '';
+        $this->binding = [];
     }
 
     /**

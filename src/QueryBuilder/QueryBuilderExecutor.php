@@ -10,6 +10,7 @@ use Xel\DB\QueryBuilder\Exception\QueryBuilderException;
 
 trait QueryBuilderExecutor
 {
+    public int $lastId;
     /**
      * @throws Exception
      */
@@ -40,10 +41,11 @@ trait QueryBuilderExecutor
     /**
      * @param string $query
      * @param array<string|int, mixed> $binding
-     * @return false|string|PDOStatement
+     * @return false|PDOStatement|PDO
+     * @throws QueryBuilderException
      * @throws Exception
      */
-    public function execute(string $query, array $binding = []): false|string|PDOStatement
+    public function execute(string $query, array $binding = []): false|PDOStatement|string
     {
         if($this->mode){
             $conn =  $this->getConnection();
@@ -60,6 +62,11 @@ trait QueryBuilderExecutor
                     $stmt->bindValue($item, $value, $paramType);
                 }
                 $stmt->execute();
+                $lastInsertedId = $conn->lastInsertId();
+
+                if($lastInsertedId !== false){
+                    $this->lastId = $lastInsertedId;
+                }
                 // commit
                 $conn->commit();
 
@@ -70,7 +77,6 @@ trait QueryBuilderExecutor
                 if ($isNonSelect) {
                     return true; // Or any indication of success
                 }
-
                 return $stmt;
             }catch (PDOException $e){
                 $conn->rollBack();
@@ -99,7 +105,7 @@ trait QueryBuilderExecutor
                 $isNonSelect = strtoupper(substr(trim($query), 0, 6)) !== 'SELECT';
                 // Return the statement if it's a non-SELECT operation
                 if ($isNonSelect) {
-                    return true; // Or any indication of success
+                    return $conn; // Or any indication of success
                 }
                 return $stmt;
             }catch (PDOException $e){

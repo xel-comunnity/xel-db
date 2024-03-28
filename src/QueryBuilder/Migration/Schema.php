@@ -2,8 +2,9 @@
 
 namespace Xel\DB\QueryBuilder\Migration;
 use Exception;
+use Xel\DB\Contract\QueryDDLInterface;
 
-class Schema extends MigrationManager
+class Schema extends MigrationManager implements QueryDDLInterface
 {
     public static function create(string $tableName, callable $callback): TableBuilder
     {

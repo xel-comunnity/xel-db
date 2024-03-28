@@ -4,8 +4,9 @@ namespace Xel\DB\QueryBuilder\Migration;
 use Exception;
 use PDO;
 use PDOException;
+use Xel\DB\Contract\QueryTableInterface;
 
-class TableBuilder
+class TableBuilder implements QueryTableInterface
 {
     private array $field = [];
     private array $alter = [];
@@ -17,10 +18,6 @@ class TableBuilder
         private readonly PDO $pdo
     ){}
 
-
-    /**
-     * DDL
-     */
     public function create(string $table): TableBuilder
     {
         $this->command = "CREATE TABLE";
@@ -63,7 +60,13 @@ class TableBuilder
      */
     public function id(): static
     {
-        $this->field[] = 'id INT AUTO_INCREMENT PRIMARY KEY';
+        $this->field[] = 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY';
+        return $this;
+    }
+
+    public function unsignedINT(string $name): static
+    {
+        $this->field[] = "$name INT UNSIGNED";
         return $this;
     }
 
@@ -158,6 +161,27 @@ class TableBuilder
         return $this;
     }
 
+    public function onDelete(string $type): static
+    {
+        $this->field[] = " ON DELETE $type";
+        return $this;
+    }
+
+    // Add ON UPDATE support to foreign key constraints
+    public function onUpdate(string $type): static
+    {
+        $this->field[] = " ON UPDATE $type";
+        return $this;
+    }
+
+    public function index(string $column, ?string $indexName = null): static
+    {
+        $indexName = $indexName ?: "index_$column";
+        $this->field[] = "INDEX $indexName ($column)";
+        return $this;
+    }
+
+
     // ? alter field
     public function addColumn(string $name, string $type , mixed $param): static
     {
@@ -200,6 +224,7 @@ class TableBuilder
         $this->alter[] = "RENAME TO $newTableName";
         return $this;
     }
+
 
     /**
      * @throws Exception

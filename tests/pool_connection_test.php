@@ -26,7 +26,7 @@ it("can create connection", function (){
          */
 
         $queryBuilderExecutor = new QueryBuilderExecutor($db);
-        $queryBuilder = new Xel\DB\QueryBuilder\QueryBuilder($queryBuilderExecutor);
+        $queryBuilder = new Xel\DB\QueryBuilder\QueryDML($queryBuilderExecutor);
 
 
         /**
