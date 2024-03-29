@@ -155,6 +155,32 @@ class TableBuilder implements QueryTableInterface
         return $this;
     }
 
+    public function index(string $column, ?string $indexName = null): static
+    {
+        $indexName = $indexName ?: "index_$column";
+        $this->field[] = "INDEX $indexName ($column)";
+        return $this;
+    }
+
+    public function unique(): static
+    {
+        $this->field[] = "UNIQUE";
+        return $this;
+    }
+
+    public function null(): static
+    {
+        $this->field[] = "NULL";
+        return $this;
+    }
+
+    public function notNull(): static
+    {
+        $this->field[] = "NOT NULL";
+        return $this;
+    }
+
+
     public function foreign(string $column, string $foreignTable, string $foreignColumn): static
     {
         $this->field[] = "FOREIGN KEY ($column) REFERENCES $foreignTable($foreignColumn)";
@@ -174,12 +200,6 @@ class TableBuilder implements QueryTableInterface
         return $this;
     }
 
-    public function index(string $column, ?string $indexName = null): static
-    {
-        $indexName = $indexName ?: "index_$column";
-        $this->field[] = "INDEX $indexName ($column)";
-        return $this;
-    }
 
 
     // ? alter field

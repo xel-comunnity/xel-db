@@ -196,8 +196,6 @@ class MigrationManager
      */
     public static function freshMigrate(): void
     {
-
-
         /**
          * Drop Migrations
          */

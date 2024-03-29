@@ -113,7 +113,5 @@ trait QueryBuilderExecutor
                 throw new QueryBuilderException($e->getMessage());
             }
         }
-
-
     }
 }

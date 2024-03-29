@@ -7,7 +7,6 @@ use Xel\DB\QueryBuilder\Migration\TableBuilder;
 interface QueryTableInterface
 {
     // ? DDL Operation
-
     public function create(string $table): TableBuilder;
     public function dropTable(string $table): TableBuilder;
     public function alterTable(string $table): static;
@@ -17,22 +16,25 @@ interface QueryTableInterface
     // ? Default id value
     public function id(): static;
 
-    // ? Text Based
 
+    // ? Text Based
     public function string(string $name, int $length = 255): static;
     public function text(string $name): static;
 
-    // ? Nu,eric
+
+    // ? Numeric
     public function integer(string $name): static;
     public function unsignedINT(string $name): static;
     public function float(string $name, int $precision = 10, int $scale = 2): static;
     public function double(string $name, int $precision = 10, int $scale = 2): static;
     public function decimal(string $name, int $precision = 10, int $scale = 2): static;
 
+
     // ? Date format
     public function datetime(string $name): static;
     public function date(string $name): static;
     public function time(string $name): static;
+
 
     // ? Other Format
     public function binary(string $name): static;
@@ -40,13 +42,16 @@ interface QueryTableInterface
     public function blob(string $name): static;
     public function point(string $name): static;
     public function default(string $value): static;
+    public function index(string $column, ?string $indexName = null): static;
+    public function unique():static;
+    public function null();
+    public function notNull();
 
 
     // ? Constraint & Foreign
     public function foreign(string $column, string $foreignTable, string $foreignColumn): static;
     public function onDelete(string $type): static;
     public function onUpdate(string $type): static;
-    public function index(string $column, ?string $indexName = null): static;
 
 
     // ? alter field
