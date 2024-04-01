@@ -18,7 +18,12 @@ class z extends Migration
             ){
                 $tableBuilder
                     ->id()
-                    ->string('name', 100);
+                    ->unsignedINT('x_id')
+                    ->unsignedINT('y_id')
+                    ->foreign('x_id', 'x', 'id')
+                    ->foreign('y_id', 'y', 'id')
+
+                ;
             })->execute();
     }
 

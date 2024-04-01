@@ -39,7 +39,7 @@ try {
      * Migration runner
      */
     MigrationManager::init($x->getConnection(), $load);
-    MigrationManager::migrate();
+    MigrationManager::rollback(3);
 } catch (ReflectionException|Exception $e) {
     echo $e->getMessage();
 }
