@@ -120,7 +120,6 @@ class MigrationManager
     public static function rollback(string|int $step = '*'): void
     {
         $availableMigration = self::rollbackInformation();
-
         if(is_int($step)){
             try {
                 $currentMigration = [];
@@ -202,20 +201,10 @@ class MigrationManager
         self::dropMigration();
 
         /**
-         * Checkup the Migrations
+         * doing new migration
          */
-        self::isMigrationExist();
-
-        foreach (self::$list as $key => $value){
-            try {
-                if ($value instanceof Migration){
-                    $value->up();
-                    self::insertInterLockMigration($key);
-                }
-            }catch (Exception $e){
-                throw new Exception($e->getMessage());
-            }
-        }
+        asort(self::$list);
+        self::migrate();
     }
 
     /**
@@ -223,6 +212,7 @@ class MigrationManager
      */
     public static function dropMigration(): void
     {
+        krsort(self::$list);
         foreach (self::$list as $value){
             try {
                 if ($value instanceof Migration){
