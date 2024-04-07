@@ -3,7 +3,6 @@ declare(strict_types=1);
 namespace Xel\DB;
 use Exception;
 use PDO;
-use PDOException;
 use Swoole\Coroutine;
 use Swoole\Coroutine\Channel;
 
@@ -32,38 +31,16 @@ class XgenConnector
             $this->channel = new Channel($this->pool);
             for ($i = 0; $i < $this->pool; $i++) {
                 Coroutine::create(function (){
-                    $conn = $this->createConnections();
+                    $conn = PDOInstance::create($this->config);
                     $this->channel->push($conn);
                 });
             }
         }else{
-            $conn = $this->createConnections();
+            $conn = PDOInstance::create($this->config);
+            $conn->setAttribute(PDO::ATTR_PERSISTENT, true);
             $this->persistence = $conn;
         }
-    }
-
-    /**
-     * @throws Exception
-     */
-    private function createConnections(): PDO
-    {
-
-        $dsn = "{$this->config['driver']}:host={$this->config['host']};dbname={$this->config['dbname']};charset={$this->config['charset']}";
-        try {
-            $pdo = new PDO(
-                $dsn,
-                $this->config['username'],
-                $this->config['password'],
-                $this->config['options']
-            );
-
-            if (!$this->poolMode) {
-                $pdo->setAttribute(PDO::ATTR_PERSISTENT, true);
-            }
-            return $pdo;
-        } catch (PDOException $e) {
-            throw new Exception("Failed to create database connection: " . $e->getMessage(), $e->getCode(), $e);
-        }
+//        var_dump($this->channel->stats());
     }
 
     /**
@@ -81,7 +58,7 @@ class XgenConnector
         $conn = $this->channel->pop(-1);
         if (!$conn){
             $conn = null;
-            $conn = $this->createConnections();
+            $conn = PDOInstance::create($this->config);
             $this->channel->push($conn);
             return $conn;
         }
@@ -93,7 +70,7 @@ class XgenConnector
     public function releasePoolConnection(?PDO $conn = null): void
     {
         if (!$conn){
-            $conn = $this->createConnections();
+            $conn = PDOInstance::create($this->config);
         }
         $this->channel->push($conn);
     }

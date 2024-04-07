@@ -7,6 +7,7 @@ use PDOStatement;
 use stdClass;
 use Swoole\Coroutine;
 use Swoole\Coroutine\Channel;
+use Swoole\Database\PDOPool;
 use Xel\DB\Contract\QueryDMLInterface;
 use Xel\DB\Contract\QueryBuilderResultInterface;
 use Xel\DB\Contract\QueryJoinInterface;
@@ -26,7 +27,7 @@ class QueryDML implements QueryDMLInterface, QueryBuilderResultInterface, QueryJ
 
     public function __construct
     (
-        protected XgenConnector $connector,
+        protected PDOPool $connector,
         protected bool $mode
     ){}
 
@@ -301,7 +302,7 @@ class QueryDML implements QueryDMLInterface, QueryBuilderResultInterface, QueryJ
     /**
      * @throws Exception
      */
-    private function executor(): false|string|PDOStatement
+    private function executor(): bool|array
     {
         return $this->execute($this->getQuery(), $this->getBinding());
     }
@@ -323,19 +324,19 @@ class QueryDML implements QueryDMLInterface, QueryBuilderResultInterface, QueryJ
      */
     public function get(): array
     {
-        return $this->executor()->fetchAll(PDO::FETCH_ASSOC);
+        return $this->executor();
     }
 
-    public function getAsync():?array
-    {
-        $can = new Channel(1);
-        Coroutine::create(function () use($can){
-            $data = $this->execute($this->getQuery(), $this->getBinding());
-            $result = $data->fetchAll(PDO::FETCH_ASSOC);
-            $can->push($result);
-        });
-        return $can->pop();
-    }
+//    public function getAsync():?array
+//    {
+//        $can = new Channel(1);
+//        Coroutine::create(function () use($can){
+//            $data = $this->execute($this->getQuery(), $this->getBinding());
+//            $result = $data->fetchAll(PDO::FETCH_ASSOC);
+//            $can->push($result);
+//        });
+//        return $can->pop();
+//    }
 
     public function resetState(): void
     {
@@ -348,13 +349,13 @@ class QueryDML implements QueryDMLInterface, QueryBuilderResultInterface, QueryJ
      */
     public function toObject(): array|stdClass
     {
-        return $this->executor()->fetchAll(PDO::FETCH_OBJ);
+        $data = json_encode($this->executor());
+        return json_decode($data);
     }
 
     public function toJson(bool $prettyPrint = false): false|string
     {
-        $result = $this->executor()->fetchAll(PDO::FETCH_ASSOC);
-        return json_encode($result);
+        return $prettyPrint === true ? json_encode($this->executor(), JSON_PRETTY_PRINT) : json_encode($this->executor());
     }
     public function orderBy(string $column, string $direction = 'DESC'): static
     {
