@@ -5,9 +5,7 @@ namespace Xel\DB\QueryBuilder;
 use Exception;
 use PDO;
 use PDOException;
-use PDOStatement;
 use Swoole\Database\PDOProxy;
-use Swoole\Database\PDOStatementProxy;
 use Xel\DB\QueryBuilder\Exception\QueryBuilderException;
 
 trait QueryBuilderExecutor
@@ -22,9 +20,8 @@ trait QueryBuilderExecutor
     }
 
     /**
-     * @param PDO $pdo
+     * @param PDO|PDOProxy $pdo
      * @return void
-     * @throws Exception
      */
     private function releaseConnection(PDO|PDOProxy $pdo): void
     {
@@ -77,6 +74,5 @@ trait QueryBuilderExecutor
         } finally {
             $this->releaseConnection($conn);
         }
-
     }
 }

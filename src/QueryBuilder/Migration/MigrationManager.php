@@ -212,6 +212,7 @@ class MigrationManager
      */
     public static function dropMigration(): void
     {
+        var_dump(self::$list);
         krsort(self::$list);
         foreach (self::$list as $value){
             try {
