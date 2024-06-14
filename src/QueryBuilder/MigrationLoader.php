@@ -40,7 +40,6 @@ class MigrationLoader
         }
 
     }
-
     public function getListOfMigration(): array
     {
         return $this->migrations;
