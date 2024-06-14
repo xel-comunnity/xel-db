@@ -39,12 +39,6 @@ trait QueryBuilderExecutor
     public function execute(string $query, array $binding = []): bool|array
     {
         $conn =  $this->getConnection();
-        if ($conn === false){
-            throw new Exception('Failed to get valid database connection', 500);
-        }
-
-        var_dump($query, $binding);
-
         try {
             $conn->setAttribute(PDO::ATTR_AUTOCOMMIT, false);
             $conn->beginTransaction();

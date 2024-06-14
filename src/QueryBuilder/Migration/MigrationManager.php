@@ -212,8 +212,9 @@ class MigrationManager
      */
     public static function dropMigration(): void
     {
-        var_dump(self::$list);
+
         krsort(self::$list);
+        var_dump(self::$list);
         foreach (self::$list as $value){
             try {
                 if ($value instanceof Migration){
