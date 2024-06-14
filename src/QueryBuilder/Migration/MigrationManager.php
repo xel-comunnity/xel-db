@@ -212,15 +212,38 @@ class MigrationManager
      */
     public static function dropMigration(): void
     {
-
         krsort(self::$list);
-        var_dump(self::$list);
-        foreach (self::$list as $value){
+
+// Separate tables with foreign keys and regular tables
+        $foreignKeyTables = [];
+        $regularTables = [];
+
+        foreach (self::$list as $key => $value) {
+            if (strpos($key, 'a_') === 0 || strpos($key, 'p_') === 0) {
+                $foreignKeyTables[$key] = $value;
+            } else {
+                $regularTables[$key] = $value;
+            }
+        }
+
+// Process foreign key tables first
+        foreach ($foreignKeyTables as $value) {
             try {
-                if ($value instanceof Migration){
+                if ($value instanceof Migration) {
                     $value->down();
                 }
-            }catch (Exception $e){
+            } catch (Exception $e) {
+                throw new Exception($e->getMessage());
+            }
+        }
+
+        // Then process regular tables
+        foreach ($regularTables as $value) {
+            try {
+                if ($value instanceof Migration) {
+                    $value->down();
+                }
+            } catch (Exception $e) {
                 throw new Exception($e->getMessage());
             }
         }
@@ -229,6 +252,22 @@ class MigrationManager
          * Drop migrations table
          */
         self::$table['migrations']->down();
+
+//        krsort(self::$list);
+//        foreach (self::$list as $value){
+//            try {
+//                if ($value instanceof Migration){
+//                    $value->down();
+//                }
+//            }catch (Exception $e){
+//                throw new Exception($e->getMessage());
+//            }
+//        }
+//
+//        /**
+//         * Drop migrations table
+//         */
+//        self::$table['migrations']->down();
     }
 }
 
