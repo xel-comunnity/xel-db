@@ -38,16 +38,25 @@ trait QueryBuilderExecutor
      */
     public function execute(string $query, array $binding = []): bool|array
     {
-        var_dump($query, $binding);
         $conn =  $this->getConnection();
         try {
             $conn->setAttribute(PDO::ATTR_AUTOCOMMIT, false);
             $conn->beginTransaction();
+
             $stmt = $conn->prepare($query);
+//            foreach ($binding as $item => $value) {
+//                $paramType = is_int($value) ? PDO::PARAM_INT : (is_bool($value) ? PDO::PARAM_BOOL : PDO::PARAM_STR);
+//                $stmt->bindValue($item, $value, $paramType);
+//            }
+
+            // Only bind parameters that are actually in the query
             foreach ($binding as $item => $value) {
-                $paramType = is_int($value) ? PDO::PARAM_INT : (is_bool($value) ? PDO::PARAM_BOOL : PDO::PARAM_STR);
-                $stmt->bindValue($item, $value, $paramType);
+                if (str_contains($query, $item)) {
+                    $paramType = is_int($value) ? PDO::PARAM_INT : (is_bool($value) ? PDO::PARAM_BOOL : PDO::PARAM_STR);
+                    $stmt->bindValue($item, $value, $paramType);
+                }
             }
+
             $stmt->execute();
             $lastInsertedId = $conn->lastInsertId();
 

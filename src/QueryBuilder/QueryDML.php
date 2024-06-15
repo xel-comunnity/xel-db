@@ -324,7 +324,9 @@ class QueryDML implements QueryDMLInterface, QueryBuilderResultInterface, QueryJ
      */
     public function get(): array
     {
-        return $this->executor();
+        $data = $this->executor();
+        $this->resetState();
+        return $data;
     }
 
 //    public function getAsync():?array
