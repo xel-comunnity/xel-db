@@ -4,7 +4,6 @@ namespace Xel\DB\QueryBuilder;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionException;
-use Xel\DB\QueryBuilder\Migration\Migration;
 
 class MigrationLoader
 {

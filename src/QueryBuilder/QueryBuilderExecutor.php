@@ -38,6 +38,7 @@ trait QueryBuilderExecutor
      */
     public function execute(string $query, array $binding = []): bool|array
     {
+        var_dump($query, $binding);
         $conn =  $this->getConnection();
         try {
             $conn->setAttribute(PDO::ATTR_AUTOCOMMIT, false);
